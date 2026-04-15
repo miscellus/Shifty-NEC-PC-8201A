@@ -23,50 +23,31 @@ Game:
 	sta KeyboardRow6Pressed
 	ani KeyUp | KeyDown | KeyLeft | KeyRight
 	mov b, a
-	jz .gameLoop
+	jz .gameLoop ; If none of the movement keys were pressed, jump back
 
-	call SetInterruptMask_1d
+	di
+	lhld PlayerPos
+	xchg
 	lxi h, TileEmpty
-	lda PlayerTileX
-	mov d, a
-	lda PlayerTileY
-	mov e, a
 	call DrawTile
-	call SetInterruptMask_09
-
-	mov a, b ; restore pressed
+	ei
 
 	; Move player
+	mov a, b ; restore pressed
 	ani KeyLeft
-	jz .afterMoveLeft
-	lda PlayerTileX
-	dcr a
-	sta PlayerTileX
-.afterMoveLeft:
-	mov a, b ; restore pressed
+	cnz MoveLeft
 
+	mov a, b ; restore pressed
 	ani KeyRight
-	jz .afterMoveRight
-	lda PlayerTileX
-	inr a
-	sta PlayerTileX
-.afterMoveRight:
-	mov a, b ; restore pressed
+	cnz MoveRight
 
+	mov a, b ; restore pressed
 	ani KeyUp
-	jz .afterMoveUp
-	lda PlayerTileY
-	dcr a
-	sta PlayerTileY
-.afterMoveUp:
-	mov a, b ; restore pressed
+	cnz MoveUp
 
+	mov a, b ; restore pressed
 	ani KeyDown
-	jz .afterMoveDown
-	lda PlayerTileY
-	inr a
-	sta PlayerTileY
-.afterMoveDown:
+	cnz MoveDown
 
 	call Draw
 	jnc .gameLoop
@@ -81,9 +62,42 @@ Init:
 
 	ret
 
+MoveLeft:
+	lda PlayerTileX
+	cpi 1
+	rc
+	dcr a
+	sta PlayerTileX
+	ret
+
+MoveRight:
+	lda PlayerTileX
+	cpi 23
+	rp
+	inr a
+	sta PlayerTileX
+	ret
+
+MoveUp:
+	lda PlayerTileY
+	cpi 1
+	rc
+	dcr a
+	sta PlayerTileY
+	ret
+
+MoveDown:
+	lda PlayerTileY
+	cpi 7
+	rp
+	inr a
+	sta PlayerTileY
+	ret
+
 GameData:
-PlayerTileX: ds 1
+PlayerPos:
 PlayerTileY: ds 1
+PlayerTileX: ds 1
 KeyboardRow6Down: ds 1
 KeyboardRow6Pressed: ds 1
 Level: ds 96 ; Tile graphics map,
