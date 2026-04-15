@@ -1,79 +1,113 @@
 PortA equ 0xB9
 PortB equ 0xBA
+PortKeyScan equ 0xE8
 PortLcdCommand equ 0xfe
 PortLcdStatus equ 0xfe
 PortLcdData equ 0xff
 
 	org 0xa000
 
-TestDrawTile:
-	call SetInterruptMask_1d
+Game:
+	call Init
+	call Draw
+.gameLoop:
+	call CheckStopKey
+	rc
 
-	mvi d, 0
-	mvi e, 0
-	lxi h, TileBrick
-	mvi c, 24
-.hejsan:
-	call DrawTile
-	mov a, e
-	xri 7
+	lda KeyboardRow6Down
+	cma
+	mov b, a ; Store NOT of the old row 6 in b
+	call ReadArrowKeyRow
+	sta KeyboardRow6Down
+	ana b
+	sta KeyboardRow6Pressed
+	ani KeyUp | KeyDown | KeyLeft | KeyRight
+	mov b, a
+	jz .gameLoop
+
+	call SetInterruptMask_1d
+	lxi h, TileEmpty
+	lda PlayerTileX
+	mov d, a
+	lda PlayerTileY
 	mov e, a
 	call DrawTile
-	inr d
-	dcr c
-	jnz .hejsan
+	call SetInterruptMask_09
 
+	mov a, b ; restore pressed
 
-	mvi d, 0
-	mvi e, 1
-	mvi c, 6
-.hejsan2:
-	call DrawTile
-	mov a, d
-	xri 23
+	; Move player
+	ani KeyLeft
+	jz .afterMoveLeft
+	lda PlayerTileX
+	dcr a
+	sta PlayerTileX
+.afterMoveLeft:
+	mov a, b ; restore pressed
+
+	ani KeyRight
+	jz .afterMoveRight
+	lda PlayerTileX
+	inr a
+	sta PlayerTileX
+.afterMoveRight:
+	mov a, b ; restore pressed
+
+	ani KeyUp
+	jz .afterMoveUp
+	lda PlayerTileY
+	dcr a
+	sta PlayerTileY
+.afterMoveUp:
+	mov a, b ; restore pressed
+
+	ani KeyDown
+	jz .afterMoveDown
+	lda PlayerTileY
+	inr a
+	sta PlayerTileY
+.afterMoveDown:
+
+	call Draw
+	jnc .gameLoop
+	ret
+
+Init:
+	mvi a, 19
+	sta PlayerTileX
+
+	mvi a, 6
+	sta PlayerTileY
+
+	ret
+
+GameData:
+PlayerTileX: ds 1
+PlayerTileY: ds 1
+KeyboardRow6Down: ds 1
+KeyboardRow6Pressed: ds 1
+Level: ds 96 ; Tile graphics map,
+SolidMap: ds 24 ; 1 byte per column each bit signifies solid wall
+
+Draw:
+	call SetInterruptMask_1d
+
+	lda PlayerTileX
 	mov d, a
-	call DrawTile
-	inr e
-	dcr c
-	jnz .hejsan2
-
-	mvi d, 2
-	mvi e, 5
-	lxi h, TileFace
-	call DrawTile
-
-	inr d
-	inr d
-	dcr e
-	lxi h, TilePowerUp
-	call DrawTile
-
-	inr d
-	inr d
-	dcr e
-	lxi h, TileGoblin
+	lda PlayerTileY
+	mov e, a
+	lxi h, TileBoxKidDown
 	call DrawTile
 
 	mvi d, 11
 	mvi e, 3
-	lxi h, TileBat
+	lxi h, TileCrateStone
 	call DrawTile
 
-	lxi d, 0x0002
-	lxi h, TileDoorClosed
-	call DrawTile
 
-	hlt
-	jmp $
-	jmp SetInterruptMask_09
-
-DrawTile:
-; [hl] = Pointer to 10x8 tile
-; [D] = Tile X [0; 23]
-; [E] = Tile Y [0;  7]
-	push h
-	push d
-	push b
+	;;;; DEBUG ;;;; DEBUG ;;;; DEBUG ;;;; DEBUG ;;;; DEBUG
+	mvi d, 2
+	mvi e, 2
 
 	push h
 	call LcdGetBlockMask
@@ -83,18 +117,116 @@ DrawTile:
 	call LcdWaitReady
 	out PortLcdCommand ; Set page and offset
 
-	mvi c, 5
+	lda KeyboardRow6Down
 	call LcdWaitReady
+	out PortLcdData
+	call LcdWaitReady
+	out PortLcdData
+	call LcdWaitReady
+	out PortLcdData
+	call LcdWaitReady
+	out PortLcdData
+	;;;; DEBUG ;;;; DEBUG ;;;; DEBUG ;;;; DEBUG ;;;; DEBUG
+
+	call SetInterruptMask_09
+	ret
+
+CheckStopKey:
+	push b
+	in PortB
+	mov b,a
+	ori 0b00000001
+	out PortB
+	in PortA
+	mov c,a
+	mvi a, 0b01111111
+	out PortA
+	in PortKeyScan
+	push psw
+	mvi a, 0b11111111
+	out PortA
+	mov a,b
+	ani 0b11111110
+	out PortB
+	in PortKeyScan
+	rrc
+	mov a,c
+	out PortA
+	mov a,b
+	out PortB
+	pop b
+	mov a,b
+	rar
+	ani 0b11000000
+	pop b
+	rnz
+	inr a
+	stc
+	ret
+
+KeyUp    equ (1 << 1)
+KeyDown  equ (1 << 2)
+KeyLeft  equ (1 << 3)
+KeyRight equ (1 << 4)
+
+ReadArrowKeyRow:
+; Result: [A] = bit mask for key state of row given in [C]
+; 1 = pressed, 0 = released
+	push b
+    di
+    in   PortB
+    ori  0b00000001
+    out  PortB
+    in   PortA
+    mov  b, a ; save old PortA value
+    mvi  a, 0b10111111 ; Strobe on row 6
+    out  PortA
+    in   PortKeyScan ; read keyboard bits (0 = pressed)
+    mov  c, a
+
+    mov  a, b ; restore PortA
+    out  PortA
+
+    mov  a, c
+    ei
+    pop  b
+    cma ; Make 1 mean pressed and 0 mean NOT pressed
+    ret
+
+
+DrawTile:
+; [hl] = Pointer to 10x8 tile
+; [D] = Tile X [0; 23]
+; [E] = Tile Y [0;  7]
+	push h
+	push d
+	push b
+	push psw
+
+	push h
+	call LcdGetBlockMask
+	call LcdSelectBlock
+	pop h
+	call LcdCalcPageAndOffset
+	call LcdWaitReady
+	out PortLcdCommand ; Set page and offset
+
+	mvi c, 9
 .WriteColumns:
-	mov a, m
-	out PortLcdData ; Write column to LCD memory
-	inx h
+	; in PortLcdStatus
+	; rlc ; shift busy bit out into carry bit
+	; jc .WriteColumns ; If cary set, LCD is busy, so keep looping	mov a, m
+	call LcdWaitReady
 	mov a, m
 	out PortLcdData ; Write column to LCD memory
 	inx h
 	dcr c
 	jnz .WriteColumns
 
+	mov a, m
+	out PortLcdData ; Write column to LCD memory
+
+	pop psw
 	pop b
 	pop d
 	pop h
@@ -222,9 +354,28 @@ SetInterruptMask_09:
 	ret
 
 
+;---------------------------------------
+; Tile images
+;---------------------------------------
+
+    include "tiles.s8085"
 ;
 ; MAPS
 ;
+
+TileEmpty:
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+
+
 	if 0
 MapLevel1:
     db  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
@@ -236,11 +387,30 @@ MapLevel1:
     db  0,  1,  1, 11,  1,  1, 10,  0,  9,  9,  9,  9,  9,  9,  1,  1,  1,  1,  1,  3,  1,  1,  1,  0
     db  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 
-    endif
 
-;---------------------------------------
-; DATA
-;---------------------------------------
+TileEmpty2:
+	db 0b00000010
+	db 0b00000000
+	db 0b00010000
+	db 0b00000000
+	db 0b00000001
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b01000000
+	db 0b00000000
+
+TilePerson:
+	db 0b00010000
+	db 0b00111110
+	db 0b01000001
+	db 0b11011001
+	db 0b01000001
+	db 0b01000001
+	db 0b11011001
+	db 0b01000001
+	db 0b00111110
+	db 0b00010000
 
 TileBrick:
 	db 0b11101110
@@ -253,6 +423,18 @@ TileBrick:
 	db 0b11101110
 	db 0b11101110
 	db 0b00001110
+
+TileBrickInv:
+	db 0b00010001
+	db 0b00011111
+	db 0b00010001
+	db 0b00010001
+	db 0b11110001
+	db 0b00010001
+	db 0b00011111
+	db 0b00010001
+	db 0b00010001
+	db 0b11110001
 
 TileFace:
 	db 0b00100000
@@ -302,28 +484,16 @@ TileDoorClosed:
 	db 0b10000001
 	db 0b11111111
 
-TileDoorOpen:
-	db 0b11111111
-	db 0b10000001
-	db 0b10000001
-	db 0b10000001
-	db 0b10000001
-	db 0b10000001
-	db 0b10000001
-	db 0b10000001
-	db 0b10000001
-	db 0b11111111
-
-TilePowerUp:
-	db 0b00000000
-	db 0b01111110
-	db 0b10000001
-	db 0b10000001
-	db 0b10010101
-	db 0b10011101
-	db 0b10010101
-	db 0b10000001
-	db 0b01111110
+TileCrate:
+	db 0b01111111
+	db 0b01100001
+	db 0b01100001
+	db 0b01100001
+	db 0b01100001
+	db 0b01100001
+	db 0b01100001
+	db 0b01100001
+	db 0b01111111
 	db 0b00000000
 
 TileWater:
@@ -410,6 +580,8 @@ TilePile:
 	db 0b11000000
 	db 0b10000000
 
+	if 0
+
 TileSlime:
 	db 0b00000000
 	db 0b01100000
@@ -457,3 +629,7 @@ TileGhost:
 	db 0b11110100
 	db 0b01111000
 	db 0b10000000
+
+	endif
+
+    endif

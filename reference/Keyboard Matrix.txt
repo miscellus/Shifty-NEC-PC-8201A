@@ -1,0 +1,56 @@
+Keyboard Matrix
+
+KB0	KB1	KB2	KB3	KB4	KB5	KB6	KB7
+----------------------------------------------------------------+
+Z	X	C	V	B	N	M	L	| PA0
+A	S	D	F	G	H	J	K	| PA1
+Q	W	E	R	T	Y	U	I	| PA2
+O	P	@	\	,	.	/	]	| PA3
+1	2	3	4	5	6	7	8	| PA4
+9	0	;	:	-	[	Space	Insert	| PA5
+BacSpc	Up	Down	Left	Right	Tab	Esc	Return	| PA6
+F1	F2	F3	F4	F5	N/A	N/A	Stop	| PA7
+Shift	Ctrl	Graph	N/A	Caps	N/A	N/A	N/A	| PB0
+
+
+The keyboard is strobed in software.
+
+It works as follows:
+	1. Strobe is turned on for a keyboard row. E.g. To strobe the third row (the one starting QWERTY), out (1 << 2) to output port PORTA
+	2. while the strobe is turned on, read a byte from KEYIN port. the LSB will be 0 if the Q key is pressed, otherwise the LSB will be 1 if Q is NOT pressed. the second least significant bit encodes the state of W, the third E, and so on.
+	3. Turn off strobe.
+
+Here is a routine for checking if SHIFT + STOP is pressed:
+
+CheckStopKey:
+	push b
+	in PortB
+	mov b,a
+	ori 0b00000001
+	out PortB
+	in PortA
+	mov c,a
+	mvi a, 0b01111111
+	out PortA
+	in PortKeyScan
+	push psw
+	mvi a, 0b11111111
+	out PortA
+	mov a,b
+	ani 0b11111110
+	out PortB
+	in PortKeyScan
+	rrc
+	mov a,c
+	out PortA
+	mov a,b
+	out PortB
+	pop b
+	mov a,b
+	rar
+	ani 0b11000000
+	pop b
+	rnz
+	inr a
+	stc
+	ret
