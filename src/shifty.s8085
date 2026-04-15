@@ -50,7 +50,7 @@ Game:
 	cnz MoveDown
 
 	call Draw
-	jnc .gameLoop
+	jmp .gameLoop
 	ret
 
 Init:
@@ -94,6 +94,22 @@ MoveDown:
 	sta PlayerTileY
 	ret
 
+CheckPos:
+; [A]: Y pos
+; [C]: X pos
+; X looks up solid row
+; turn Y which bit to check
+	lxi h, SolidMap
+	mvi b, 0
+	dad b
+	mov a, m
+	inr c
+.shift:
+	rrc ; 7
+	dcr c
+	jnz .shift
+	ret ; carry should be the solid flag
+
 GameData:
 PlayerPos:
 PlayerTileY: ds 1
@@ -101,15 +117,41 @@ PlayerTileX: ds 1
 KeyboardRow6Down: ds 1
 KeyboardRow6Pressed: ds 1
 Level: ds 96 ; Tile graphics map,
-SolidMap: ds 24 ; 1 byte per column each bit signifies solid wall
+SolidMap: ; 1 byte per column each bit signifies solid wall
+	; @hardcode for now hardcode solid flag for stone at (11,3)
+	; mvi d, 11
+	; mvi e, 3
+
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00001000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
 
 Draw:
 	call SetInterruptMask_1d
 
-	lda PlayerTileX
-	mov d, a
-	lda PlayerTileY
-	mov e, a
+	lhld PlayerPos
+	xchg
 	lxi h, TileBoxKidDown
 	call DrawTile
 
