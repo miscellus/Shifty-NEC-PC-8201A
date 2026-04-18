@@ -5,7 +5,6 @@ TargetNec equ 1
 	org MapRamBase
 Game:
 	call Init
-	call Draw
 .gameLoop:
 	call CheckStopKey
 	rc
@@ -66,7 +65,7 @@ Game:
 	mov l, a
 	xchg ; [D] = x, [E] = y
 
-	call CheckPos
+	call CheckSolid
 	jc .gameLoop ; Loop back if solid hit
 
 	push d ; save new player pos
@@ -90,9 +89,39 @@ Init:
 	mvi a, 6
 	sta PlayerTileY
 
+	call SetInterruptMask_1d
+	lxi h, Level
+	mvi d, 0 ; [D] = X = 0
+.drawLevelRows:
+	mvi e, 0 ; [E] = Y = 0
+.drawLevelCols:
+	push h ; Save level offset
+	mvi b, 0
+	mov c, m ; [BC] = TileIndex
+	lxi h, Tiles
+	dad b
+	; [D] = X
+	; [E] = Y
+	; [HL] = TileOffset = Tiles + TileIndex
+	     ; lxi h, TileWallBrick
+	call DrawTile
+	pop h ; restore level offset
+	inx h ; next level tile
+	inr e ; next Y
+	mov a, e
+	cpi 8
+	jc .drawLevelCols
+	inr d
+	mov a, d
+	cpi 24
+	jc .drawLevelRows
+
+	call SetInterruptMask_09
+
+	call Draw
 	ret
 
-CheckPos:
+CheckSolid:
 ; [D]: X pos
 ; [E]: Y pos
 ; X looks up solid row
@@ -112,10 +141,10 @@ CheckPos:
 	cpi 24
 	jnc .endWithCarry
 
-	lxi h, SolidMap
+	lxi h, SolidBitMap
 	mvi b, 0
 	mov c, d ; move X into BC
-	dad b ; now HL points at SolidMap + X
+	dad b ; now HL points at SolidBitMap + X
 	mov a, m ; Load column of solid bits
 
 	mov c, e ; [C] = Y
@@ -133,42 +162,6 @@ CheckPos:
 	pop h
 	ret ; carry should be the solid flag
 
-GameData:
-PlayerPos:
-PlayerTileY: ds 1
-PlayerTileX: ds 1
-KeyboardRow6Down: ds 1
-KeyboardRow6Pressed: ds 1
-SolidMap: ; 1 byte per column each bit signifies solid wall
-	; @hardcode for now hardcode solid flag for stone at (11,3)
-	; mvi d, 11
-	; mvi e, 3
-
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00001000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-
 Draw:
 	call SetInterruptMask_1d
 
@@ -177,10 +170,10 @@ Draw:
 	lxi h, TileBoxKidDown
 	call DrawTile
 
-	mvi d, 11
-	mvi e, 3
-	lxi h, TileWallBrick
-	call DrawTile
+	; mvi d, 11
+	; mvi e, 3
+	; lxi h, TileWallBrick
+	; call DrawTile
 
 	call SetInterruptMask_09
 	ret
@@ -422,9 +415,8 @@ SetInterruptMask_09:
 ; Tile images
 ;---------------------------------------
 
+Tiles:
     include "tiles.s8085"
-
-    ds 24*8*10 + 2
 
 TileEmpty:
 	db 0b00000000
@@ -477,3 +469,70 @@ TileGoblin:
 	db 0b01000000
 
 	endif
+
+;---------------------------------------
+; Game data
+;---------------------------------------
+
+PlayerPos:
+PlayerTileY: ds 1
+PlayerTileX: ds 1
+KeyboardRow6Down: ds 1
+KeyboardRow6Pressed: ds 1
+SolidBitMap: ; 1 byte per column each bit signifies solid wall
+	; @hardcode for now hardcode solid flag for stone at (11,3)
+	; mvi d, 11
+	; mvi e, 3
+
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00001000
+	db 0b00001000
+	db 0b00011000
+	db 0b00000100
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+	db 0b00000000
+
+TE equ (TileEmpty - Tiles)
+TW equ (TileWallBrick - Tiles)
+Level:
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TW,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TW,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TW,  TW,  TE,  TE,  TE
+	db  TE,  TE,  TW,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
