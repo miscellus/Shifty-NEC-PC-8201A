@@ -1,12 +1,8 @@
-PortA equ 0xB9
-PortB equ 0xBA
-PortKeyScan equ 0xE8
-PortLcdCommand equ 0xfe
-PortLcdStatus equ 0xfe
-PortLcdData equ 0xff
+TargetNec equ 1
+; TargetT100 equ 1
+	include "hardware.s8085"
 
-	org 0xa000
-
+	org MapRamBase
 Game:
 	call Init
 	call Draw
@@ -25,29 +21,63 @@ Game:
 	mov b, a
 	jz .gameLoop ; If none of the movement keys were pressed, jump back
 
+	;
+	; Move player
+	;
+
+	xra a
+	mov d, a ; zero [DE]
+	mov e, a
+
+	; [B] = pressed key state
+
+	mov a, b ; restore pressed
+	ani KeyLeft
+	jz .leftNotPressed
+	dcr d
+.leftNotPressed:
+
+	mov a, b ; restore pressed
+	ani KeyRight
+	jz .rightNotPressed
+	inr d
+.rightNotPressed:
+
+	mov a, b ; restore pressed
+	ani KeyUp
+	jz .upNotPressed
+	dcr e
+.upNotPressed:
+
+	mov a, b ; restore pressed
+	ani KeyDown
+	jz .downNotPressed
+	inr e
+.downNotPressed:
+
+	; [DE] = relative movement
+
+	lhld PlayerPos
+	mov a, d
+	add h
+	mov h, a
+	mov a, e
+	add l
+	mov l, a
+	xchg ; [D] = x, [E] = y
+
+	call CheckPos
+	jc .gameLoop ; Loop back if solid hit
+
+	push d ; save new player pos
 	di
 	lhld PlayerPos
 	xchg
 	lxi h, TileEmpty
 	call DrawTile
 	ei
-
-	; Move player
-	mov a, b ; restore pressed
-	ani KeyLeft
-	cnz MoveLeft
-
-	mov a, b ; restore pressed
-	ani KeyRight
-	cnz MoveRight
-
-	mov a, b ; restore pressed
-	ani KeyUp
-	cnz MoveUp
-
-	mov a, b ; restore pressed
-	ani KeyDown
-	cnz MoveDown
+	pop h ; restore new player pos in HL
+	shld PlayerPos ; Save position that was previously in [DE]
 
 	call Draw
 	jmp .gameLoop
@@ -62,52 +92,45 @@ Init:
 
 	ret
 
-MoveLeft:
-	lda PlayerTileX
-	cpi 1
-	rc
-	dcr a
-	sta PlayerTileX
-	ret
-
-MoveRight:
-	lda PlayerTileX
-	cpi 23
-	rp
-	inr a
-	sta PlayerTileX
-	ret
-
-MoveUp:
-	lda PlayerTileY
-	cpi 1
-	rc
-	dcr a
-	sta PlayerTileY
-	ret
-
-MoveDown:
-	lda PlayerTileY
-	cpi 7
-	rp
-	inr a
-	sta PlayerTileY
-	ret
-
 CheckPos:
-; [A]: Y pos
-; [C]: X pos
+; [D]: X pos
+; [E]: Y pos
 ; X looks up solid row
 ; turn Y which bit to check
+	push h
+	push b
+
+	;
+	; Check map boundary
+	;
+
+	mov a, e ; check y
+	cpi 8
+	jnc .endWithCarry
+
+	mov a, d ; check x
+	cpi 24
+	jnc .endWithCarry
+
 	lxi h, SolidMap
 	mvi b, 0
-	dad b
-	mov a, m
+	mov c, d ; move X into BC
+	dad b ; now HL points at SolidMap + X
+	mov a, m ; Load column of solid bits
+
+	mov c, e ; [C] = Y
 	inr c
 .shift:
 	rrc ; 7
 	dcr c
 	jnz .shift
+
+	jmp .end
+.endWithCarry:
+	stc
+.end:
+	pop b
+	pop h
 	ret ; carry should be the solid flag
 
 GameData:
@@ -116,7 +139,6 @@ PlayerTileY: ds 1
 PlayerTileX: ds 1
 KeyboardRow6Down: ds 1
 KeyboardRow6Pressed: ds 1
-Level: ds 96 ; Tile graphics map,
 SolidMap: ; 1 byte per column each bit signifies solid wall
 	; @hardcode for now hardcode solid flag for stone at (11,3)
 	; mvi d, 11
@@ -157,59 +179,35 @@ Draw:
 
 	mvi d, 11
 	mvi e, 3
-	lxi h, TileCrateStone
+	lxi h, TileWallBrick
 	call DrawTile
-
-
-	;;;; DEBUG ;;;; DEBUG ;;;; DEBUG ;;;; DEBUG ;;;; DEBUG
-	mvi d, 2
-	mvi e, 2
-
-	push h
-	call LcdGetBlockMask
-	call LcdSelectBlock
-	pop h
-	call LcdCalcPageAndOffset
-	call LcdWaitReady
-	out PortLcdCommand ; Set page and offset
-
-	lda KeyboardRow6Down
-	call LcdWaitReady
-	out PortLcdData
-	call LcdWaitReady
-	out PortLcdData
-	call LcdWaitReady
-	out PortLcdData
-	call LcdWaitReady
-	out PortLcdData
-	;;;; DEBUG ;;;; DEBUG ;;;; DEBUG ;;;; DEBUG ;;;; DEBUG
 
 	call SetInterruptMask_09
 	ret
 
 CheckStopKey:
 	push b
-	in PortB
+	in Port81C55B
 	mov b,a
 	ori 0b00000001
-	out PortB
-	in PortA
+	out Port81C55B
+	in Port81C55A
 	mov c,a
 	mvi a, 0b01111111
-	out PortA
-	in PortKeyScan
+	out Port81C55A
+	in PortKeyIn
 	push psw
 	mvi a, 0b11111111
-	out PortA
+	out Port81C55A
 	mov a,b
 	ani 0b11111110
-	out PortB
-	in PortKeyScan
+	out Port81C55B
+	in PortKeyIn
 	rrc
 	mov a,c
-	out PortA
+	out Port81C55A
 	mov a,b
-	out PortB
+	out Port81C55B
 	pop b
 	mov a,b
 	rar
@@ -220,35 +218,47 @@ CheckStopKey:
 	stc
 	ret
 
+	ifdef TargetNec
 KeyUp    equ (1 << 1)
 KeyDown  equ (1 << 2)
 KeyLeft  equ (1 << 3)
 KeyRight equ (1 << 4)
+	endif
+	ifdef TargetT100
+KeyUp    equ (1 << 6)
+KeyDown  equ (1 << 7)
+KeyLeft  equ (1 << 4)
+KeyRight equ (1 << 5)
+	endif
 
 ReadArrowKeyRow:
-; Result: [A] = bit mask for key state of row given in [C]
-; 1 = pressed, 0 = released
+	; Result: [A] = bit mask for key state of row given in [C]
+	; 1 = pressed, 0 = released
 	push b
-    di
-    in   PortB
-    ori  0b00000001
-    out  PortB
-    in   PortA
-    mov  b, a ; save old PortA value
-    mvi  a, 0b10111111 ; Strobe on row 6
-    out  PortA
-    in   PortKeyScan ; read keyboard bits (0 = pressed)
-    mov  c, a
+	di
+	in   Port81C55B
+	ori  0b00000001
+	out  Port81C55B
+	in   Port81C55A
+	mov  b, a ; save old Port81C55A value
+	ifdef TargetNec
+		mvi  a, 0b10111111 ; Strobe on row 6
+	endif
+	ifdef TargetT100
+		mvi  a, 0b11011111 ; Strobe on row 5
+	endif
+	out  Port81C55A
+	in   PortKeyIn ; read keyboard bits (0 = pressed)
+	mov  c, a
 
-    mov  a, b ; restore PortA
-    out  PortA
+	mov  a, b ; restore Port81C55A
+	out  Port81C55A
 
-    mov  a, c
-    ei
-    pop  b
-    cma ; Make 1 mean pressed and 0 mean NOT pressed
-    ret
-
+	mov  a, c
+	ei
+	pop  b
+	cma ; Make 1 mean pressed and 0 mean NOT pressed
+	ret
 
 DrawTile:
 ; [hl] = Pointer to 10x8 tile
@@ -265,22 +275,24 @@ DrawTile:
 	pop h
 	call LcdCalcPageAndOffset
 	call LcdWaitReady
-	out PortLcdCommand ; Set page and offset
+	out PortLcdCmd ; Set page and offset
 
-	mvi c, 9
+	mvi c, 5
 .WriteColumns:
-	; in PortLcdStatus
-	; rlc ; shift busy bit out into carry bit
-	; jc .WriteColumns ; If cary set, LCD is busy, so keep looping	mov a, m
-	call LcdWaitReady
+	in PortLcdStat
+	rlc ; shift busy bit out into carry bit
+	jc .WriteColumns ; If cary set, LCD is busy, so keep looping	mov a, m
 	mov a, m
 	out PortLcdData ; Write column to LCD memory
+	inx h
+	mov a, m
+	out PortLcdData
 	inx h
 	dcr c
 	jnz .WriteColumns
 
-	mov a, m
-	out PortLcdData ; Write column to LCD memory
+	; mov a, m
+	; out PortLcdData ; Write column to LCD memory
 
 	pop psw
 	pop b
@@ -300,7 +312,7 @@ DrawTile:
 ; -----------------------------------------------------------
 
 LcdGetBlockMask:
-	; --- 1. COMPUTE BASE INDEX (TileX / 5) ---
+	; BASE INDEX (TileX / 5)
 	mov a, d      ; Load TileX into A
 	mvi b, 0      ; Initialize B (will hold our driver index 'n')
 	mvi c, 5      ; Load constant divisor (5)
@@ -313,7 +325,7 @@ LcdGetBlockMask:
 	jmp .divLoop
 
 .checkY:
-	; --- 2. HANDLE TOP/BOTTOM HALF ---
+	; HANDLE TOP/BOTTOM HALF
 	mov c, a      ; SAVE REMAINDER: C is now the local TileX offset (0-4)!
 
 	mov a, e      ; Load TileY into A
@@ -326,7 +338,7 @@ LcdGetBlockMask:
 	mov b, a      ; B now holds final 'n' (5 to 9)
 
 .shiftMask:
-	; --- 3. COMPUTE 16-BIT MASK (1 << n) ---
+	; 16-BIT MASK (1 << n)
 	lxi h, 1      ; Start with mask = 1 (16-bit)
 	mov a, b      ; Use 'n' as our loop counter
 	ora a         ; Is 'n' exactly 0?
@@ -342,24 +354,23 @@ LcdGetBlockMask:
 LcdSelectBlock:
 ; [L] = LCD Block bitmask bits 0-7
 ; [H] = LCD Block bitmask bits 8-9
-				mov a,l
-				out PortA
-				in PortB
-				ani 0b11111100
-				ora h
-				out PortB
-				ret
+	mov a,l
+	out Port81C55A
+	in Port81C55B
+	ani 0b11111100
+	ora h
+	out Port81C55B
+	ret
 
 LcdWaitReady:
-				push psw
+	push psw
 .again:
-				in PortLcdStatus
-				rlc ; shift busy bit out into carry bit
-				jc .again ; If cary set, LCD is busy, so keep looping
+	in PortLcdStat
+	rlc ; shift busy bit out into carry bit
+	jc .again ; If cary set, LCD is busy, so keep looping
 
-				pop psw
-				ret
-
+	pop psw
+	ret
 
 ; -----------------------------------------------------------
 ; Subroutine: LcdCalcPageAndOffset
@@ -371,22 +382,20 @@ LcdWaitReady:
 ; -----------------------------------------------------------
 
 LcdCalcPageAndOffset:
-	; --- 1. COMPUTE THE PAGE (Bits 6,7) ---
+	; Page (Bits 6,7)
 	mov a, e      ; Load TileY (0 to 7)
-	ani 0b11      ; Mask out the top/bottom half bit (A is now 0 to 3)
-
 	rrc           ; Rotate right once  (A = P000 000P)
 	rrc           ; Rotate right twice (A = PP00 0000)
+	ani 0b11000000; Mask out the top/bottom half bit
 	mov b, a      ; Save the shifted Page mask in B
 
-	; --- 2. COMPUTE THE OFFSET (Local TileX * 10) ---
+	; Offset (Local TileX * 10)
 	mov a, c      ; Load Local TileX (0 to 4)
 	add a         ; A = x * 2
 	mov d, a      ; Save (x * 2) in D for later
 
 	add a         ; A = x * 4
 	add a         ; A = x * 8
-
 	add d         ; A = (x * 8) + (x * 2) = x * 10
 	              ; A now holds the pixel offset (0, 10, 20, 30, or 40)
 
@@ -409,15 +418,13 @@ SetInterruptMask_09:
 	ei
 	ret
 
-
 ;---------------------------------------
 ; Tile images
 ;---------------------------------------
 
     include "tiles.s8085"
-;
-; MAPS
-;
+
+    ds 24*8*10 + 2
 
 TileEmpty:
 	db 0b00000000
@@ -431,42 +438,7 @@ TileEmpty:
 	db 0b00000000
 	db 0b00000000
 
-
-	if 0
-MapLevel1:
-    db  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
-    db  0,  1,  1,  1,  1,  1,  1,  0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0,  1,  1,  1,  6,  0
-    db  0,  1,  1,  2,  1,  1,  1,  0,  1,  1,  1, 14,  1,  1,  1,  1,  1,  4,  1,  1,  1, 16,  0,  0
-    db  0,  1,  1,  1,  1,  1,  1,  5,  1,  1,  1,  1,  1,  1, 15,  1,  1,  0,  1,  1,  1,  8,  0,  0
-    db  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  9,  9,  9,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0
-    db  0, 12,  1,  1,  1,  1,  1,  0,  9,  9,  9,  9,  9,  9,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0
-    db  0,  1,  1, 11,  1,  1, 10,  0,  9,  9,  9,  9,  9,  9,  1,  1,  1,  1,  1,  3,  1,  1,  1,  0
-    db  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
-
-
-TileEmpty2:
-	db 0b00000010
-	db 0b00000000
-	db 0b00010000
-	db 0b00000000
-	db 0b00000001
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b01000000
-	db 0b00000000
-
-TilePerson:
-	db 0b00010000
-	db 0b00111110
-	db 0b01000001
-	db 0b11011001
-	db 0b01000001
-	db 0b01000001
-	db 0b11011001
-	db 0b01000001
-	db 0b00111110
-	db 0b00010000
+    if 0
 
 TileBrick:
 	db 0b11101110
@@ -479,30 +451,6 @@ TileBrick:
 	db 0b11101110
 	db 0b11101110
 	db 0b00001110
-
-TileBrickInv:
-	db 0b00010001
-	db 0b00011111
-	db 0b00010001
-	db 0b00010001
-	db 0b11110001
-	db 0b00010001
-	db 0b00011111
-	db 0b00010001
-	db 0b00010001
-	db 0b11110001
-
-TileFace:
-	db 0b00100000
-	db 0b01000010
-	db 0b10000001
-	db 0b10010010
-	db 0b10101000
-	db 0b10100000
-	db 0b10010010
-	db 0b10000001
-	db 0b01000010
-	db 0b00100000
 
 TileBat:
 	db 0b00000110
@@ -528,164 +476,4 @@ TileGoblin:
 	db 0b00100000
 	db 0b01000000
 
-TileDoorClosed:
-	db 0b11111111
-	db 0b10000001
-	db 0b10101001
-	db 0b10000001
-	db 0b10011001
-	db 0b10011001
-	db 0b10000001
-	db 0b10101001
-	db 0b10000001
-	db 0b11111111
-
-TileCrate:
-	db 0b01111111
-	db 0b01100001
-	db 0b01100001
-	db 0b01100001
-	db 0b01100001
-	db 0b01100001
-	db 0b01100001
-	db 0b01100001
-	db 0b01111111
-	db 0b00000000
-
-TileWater:
-	db 0b10101000
-	db 0b00000010
-	db 0b10001010
-	db 0b10100000
-	db 0b00001010
-	db 0b10001010
-	db 0b10100000
-	db 0b00001010
-	db 0b10001010
-	db 0b00100010
-
-TileSpike:
-	db 0b11110000
-	db 0b11111000
-	db 0b11111100
-	db 0b11111000
-	db 0b11110000
-	db 0b11111111
-	db 0b11110000
-	db 0b11111111
-	db 0b11110000
-	db 0b11111000
-
-TilePotion:
-	db 0b00000000
-	db 0b00000000
-	db 0b11111100
-	db 0b11111110
-	db 0b11111111
-	db 0b11111111
-	db 0b11111110
-	db 0b11111100
-	db 0b00000000
-	db 0b00000000
-
-TileScroll:
-	db 0b00000000
-	db 0b01111110
-	db 0b10000001
-	db 0b10011001
-	db 0b10011001
-	db 0b10000001
-	db 0b10000001
-	db 0b10000001
-	db 0b01111110
-	db 0b00000000
-
-TileMonsterBig:
-	db 0b01111110
-	db 0b00111111
-	db 0b11111111
-	db 0b01111111
-	db 0b00001111
-	db 0b00001111
-	db 0b01111111
-	db 0b11111111
-	db 0b00111111
-	db 0b01111110
-
-TileMonsterUndead:
-	db 0b00000000
-	db 0b00000000
-	db 0b10001000
-	db 0b10101110
-	db 0b01110101
-	db 0b01110101
-	db 0b10101110
-	db 0b10001000
-	db 0b00000000
-	db 0b00000000
-
-TilePile:
-	db 0b10000000
-	db 0b11000000
-	db 0b11111000
-	db 0b11111110
-	db 0b11111111
-	db 0b11111111
-	db 0b11111110
-	db 0b11111000
-	db 0b11000000
-	db 0b10000000
-
-	if 0
-
-TileSlime:
-	db 0b00000000
-	db 0b01100000
-	db 0b11110000
-	db 0b11011000
-	db 0b11111000
-	db 0b11111000
-	db 0b11011000
-	db 0b11110000
-	db 0b01100000
-	db 0b00000000
-
-TileSpider:
-	db 0b00011000
-	db 0b01010100
-	db 0b01011110
-	db 0b00111100
-	db 0b00111000
-	db 0b00111000
-	db 0b00111100
-	db 0b01011110
-	db 0b01010100
-	db 0b00011000
-
-TileViper:
-	db 0b00000000
-	db 0b01000000
-	db 0b11100000
-	db 0b10110100
-	db 0b10010110
-	db 0b01010010
-	db 0b01001110
-	db 0b00001100
-	db 0b00000000
-	db 0b00000000
-
-TileGhost:
-	db 0b10000000
-	db 0b01111000
-	db 0b11110100
-	db 0b01111110
-	db 0b10110110
-	db 0b10110110
-	db 0b01111110
-	db 0b11110100
-	db 0b01111000
-	db 0b10000000
-
 	endif
-
-    endif

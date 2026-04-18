@@ -14,7 +14,7 @@ $(SHIFTY): $(ASM) build src/shifty.s8085 src/tiles.s8085 src/levels.s8085 Makefi
 	$(ASM) -o $(SHIFTY).bin src/shifty.s8085
 	python tools/bin2bas.py $(SHIFTY).bin -o $(SHIFTY).bas
 
-src/tiles.s8085:
+src/tiles.s8085: $(wildcard assets/tile_images/*.png)
 	python tools/png2asm.py assets/tile_images src/tiles.s8085
 
 src/levels.s8085: assets/levels.txt src/tiles.s8085
