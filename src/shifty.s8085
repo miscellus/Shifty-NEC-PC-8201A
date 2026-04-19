@@ -83,21 +83,32 @@ Game:
 	ret
 
 Init:
-	lda InitialPlayerPosition.X
+	lda Level2.PlayerStartX
 	sta PlayerTileX
 
-	lda InitialPlayerPosition.Y
+	lda Level2.PlayerStartY
 	sta PlayerTileY
 
 	call SetInterruptMask_1d
-	lxi h, Level
+	lxi h, Level2.TileOffsets
 	mvi d, 0 ; [D] = X = 0
 .drawLevelRows:
 	mvi e, 0 ; [E] = Y = 0
 .drawLevelCols:
 	push h ; Save level offset
-	mvi b, 0
-	mov c, m ; [BC] = TileIndex
+
+	mov a, m
+	mvi h, 0
+	mov l, a ; [HL] = TileIndex
+	dad h ; * 2
+	mov b, h
+	mov c, l ; [BC] = TileIndex * 2
+	dad h ; * 4
+	dad h ; * 8
+	dad b ; [HL] = TileIndex * 8 + TileIndex * 2 = TileIndex * 10
+	mov b, h
+	mov c, l ; [BC] = TileIndex * 10
+
 	lxi h, Tiles
 	dad b
 	; [D] = X
@@ -141,7 +152,7 @@ CheckSolid:
 	cpi 24
 	jnc .endWithCarry
 
-	lxi h, SolidBitMap
+	lxi h, Level2.SolidBitMap
 	mvi b, 0
 	mov c, d ; move X into BC
 	dad b ; now HL points at SolidBitMap + X
@@ -480,69 +491,3 @@ KeyboardRow6Pressed: ds 1
 
 TE equ (TileEmpty - Tiles)
 	include "levels.s8085"
-
-; ;---------------------------------------
-; ; Loaded level
-; ;---------------------------------------
-
-; InitialPlayerPosition:
-; .Y: db 3
-; .X: db 11
-
-; SolidBitMap: ; 1 byte per column each bit signifies solid wall
-; 	; @hardcode for now hardcode solid flag for stone at (11,3)
-; 	; mvi d, 11
-; 	; mvi e, 3
-
-; 	db 0b00000000
-; 	db 0b00000000
-; 	db 0b00000000
-; 	db 0b00000000
-; 	db 0b00000000
-; 	db 0b00000000
-; 	db 0b00000000
-; 	db 0b00000000
-; 	db 0b00000000
-; 	db 0b00000000
-; 	db 0b00000000
-; 	db 0b00001000
-; 	db 0b00001000
-; 	db 0b00011000
-; 	db 0b00000100
-; 	db 0b00000000
-; 	db 0b00000000
-; 	db 0b00000000
-; 	db 0b00000000
-; 	db 0b00000000
-; 	db 0b00000000
-; 	db 0b00000000
-; 	db 0b00000000
-; 	db 0b00000000
-
-; TE equ (TileEmpty - Tiles)
-; TW equ (TileWallBrick - Tiles)
-; Level:
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TW,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TW,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TW,  TW,  TE,  TE,  TE
-; 	db  TE,  TE,  TW,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-; 	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE

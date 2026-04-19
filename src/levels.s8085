@@ -1,13 +1,19 @@
-;---------------------------------------
-; Loaded level
-;---------------------------------------
+;
+; Tile offset definitions
+;
 
-InitialPlayerPosition:
-.Y: db 2
-.X: db 11
+WB equ ((TileWallBrick - Tiles)/10)
+CS equ ((TileCrateStone - Tiles)/10)
+BK equ ((TileBoxKidDown - Tiles)/10)
 
-SolidBitMap: ; 1 byte per column each bit signifies solid wall
-	; generated from level file
+;-------------------------------------------------------------------------------
+Level1:
+;-------------------------------------------------------------------------------
+
+.PlayerStartY: db 2
+.PlayerStartX: db 11
+
+.SolidBitMap: ; 1 byte per column each bit signifies solid wall
 	db 0b11111111
 	db 0b11110001
 	db 0b11100001
@@ -33,10 +39,7 @@ SolidBitMap: ; 1 byte per column each bit signifies solid wall
 	db 0b10001111
 	db 0b11111111
 
-WB equ (TileWallBrick - Tiles)
-CS equ (TileCrateStone - Tiles)
-BK equ (TileBoxKidDown - Tiles)
-Level:
+.TileOffsets:
 	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
 	db  WB,  TE,  TE,  TE,  WB,  WB,  WB,  WB
 	db  WB,  TE,  CS,  TE,  TE,  WB,  WB,  WB
@@ -61,3 +64,63 @@ Level:
 	db  WB,  WB,  TE,  TE,  TE,  TE,  TE,  WB
 	db  WB,  WB,  WB,  WB,  TE,  TE,  TE,  WB
 	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+
+;-------------------------------------------------------------------------------
+Level2:
+;-------------------------------------------------------------------------------
+
+.PlayerStartY: db 4
+.PlayerStartX: db 2
+
+.SolidBitMap: ; 1 byte per column each bit signifies solid wall
+	db 0b11111111
+	db 0b11100111
+	db 0b11100111
+	db 0b11100111
+	db 0b00000000
+	db 0b01011010
+	db 0b01011010
+	db 0b01011010
+	db 0b01011010
+	db 0b01000010
+	db 0b01011110
+	db 0b01000000
+	db 0b01011110
+	db 0b01000010
+	db 0b01011010
+	db 0b01011010
+	db 0b01011010
+	db 0b01011010
+	db 0b01011010
+	db 0b01011010
+	db 0b00000000
+	db 0b01111110
+	db 0b01111110
+	db 0b00000000
+
+.TileOffsets:
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  WB,  TE,  TE,  WB,  WB,  WB
+	db  WB,  WB,  WB,  TE,  BK,  WB,  WB,  WB
+	db  WB,  WB,  WB,  TE,  TE,  WB,  WB,  WB
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  TE,  WB,  TE,  WB,  WB,  TE,  WB,  TE
+	db  TE,  WB,  TE,  WB,  WB,  TE,  WB,  TE
+	db  TE,  WB,  TE,  WB,  WB,  TE,  WB,  TE
+	db  TE,  WB,  TE,  WB,  WB,  TE,  WB,  TE
+	db  TE,  WB,  TE,  TE,  TE,  TE,  WB,  TE
+	db  TE,  WB,  WB,  WB,  WB,  CS,  WB,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  WB,  TE
+	db  TE,  WB,  WB,  WB,  WB,  TE,  WB,  TE
+	db  TE,  WB,  TE,  TE,  TE,  TE,  WB,  TE
+	db  TE,  WB,  TE,  WB,  WB,  CS,  WB,  TE
+	db  TE,  WB,  TE,  WB,  WB,  CS,  WB,  TE
+	db  TE,  WB,  TE,  WB,  WB,  CS,  WB,  TE
+	db  TE,  WB,  TE,  WB,  WB,  CS,  WB,  TE
+	db  TE,  WB,  TE,  WB,  WB,  CS,  WB,  TE
+	db  TE,  WB,  TE,  WB,  WB,  CS,  WB,  TE
+	db  TE,  CS,  TE,  TE,  CS,  TE,  TE,  TE
+	db  TE,  WB,  WB,  WB,  WB,  WB,  WB,  TE
+	db  TE,  WB,  WB,  WB,  WB,  WB,  WB,  TE
+	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+
