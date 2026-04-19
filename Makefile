@@ -18,7 +18,7 @@ src/tiles.s8085: $(wildcard assets/tile_images/*.png)
 	python tools/png2asm.py assets/tile_images src/tiles.s8085
 
 src/levels.s8085: assets/levels.txt src/tiles.s8085
-	python tools/levels2asm.py assets/levels.txt src/tiles.s8085 src/levels.s8085
+	python tools/levels2asm2.py assets/levels.txt src/tiles.s8085 > src/levels.s8085
 
 build:
 	mkdir build
