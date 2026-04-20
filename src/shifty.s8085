@@ -82,15 +82,41 @@ Game:
 	jmp .gameLoop
 	ret
 
+LoadLevel:
+; [HL] = pointer to level
+; Clobbers [A]
+; TODO(jkk): add compression and decompression
+	push b
+	push h
+	lxi b, Level
+.loop:
+	mov a, m
+	stax b
+	inx h
+	inx b
+	mov a, b
+	cpi high(LevelEnd)
+	jnz .loop
+	mov a, c
+	cpi low(LevelEnd)
+	jnz .loop
+
+	pop h
+	pop b
+	ret
+
 Init:
-	lda Level2.PlayerStartX
+	lxi h, Level2
+	call LoadLevel
+
+	lda Level.PlayerStartX
 	sta PlayerTileX
 
-	lda Level2.PlayerStartY
+	lda Level.PlayerStartY
 	sta PlayerTileY
 
 	call SetInterruptMask_1d
-	lxi h, Level2.TileOffsets
+	lxi h, Level.TileOffsets
 	mvi d, 0 ; [D] = X = 0
 .drawLevelRows:
 	mvi e, 0 ; [E] = Y = 0
@@ -152,7 +178,7 @@ CheckSolid:
 	cpi 24
 	jnc .endWithCarry
 
-	lxi h, Level2.SolidBitMap
+	lxi h, Level.SolidBitMap
 	mvi b, 0
 	mov c, d ; move X into BC
 	dad b ; now HL points at SolidBitMap + X
@@ -420,68 +446,16 @@ SetInterruptMask_09:
 	ei
 	ret
 
-;---------------------------------------
+;=======================================
 ; Tile images
-;---------------------------------------
+  include "tiles.s8085"
 
-Tiles:
-    include "tiles.s8085"
+;=======================================
+; Levels
+  include "levels.s8085"
 
-TileEmpty:
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-	db 0b00000000
-
-    if 0
-
-TileBrick:
-	db 0b11101110
-	db 0b11100000
-	db 0b11101110
-	db 0b11101110
-	db 0b00001110
-	db 0b11101110
-	db 0b11100000
-	db 0b11101110
-	db 0b11101110
-	db 0b00001110
-
-TileBat:
-	db 0b00000110
-	db 0b00000011
-	db 0b00000111
-	db 0b00001110
-	db 0b00011100
-	db 0b00011100
-	db 0b00001110
-	db 0b00000111
-	db 0b00000011
-	db 0b00000110
-
-TileGoblin:
-	db 0b01000000
-	db 0b00100000
-	db 0b10011100
-	db 0b10111110
-	db 0b00111111
-	db 0b00111111
-	db 0b10111110
-	db 0b10011100
-	db 0b00100000
-	db 0b01000000
-
-	endif
-
-;---------------------------------------
+;=======================================
 ; Game data
-;---------------------------------------
 
 PlayerPos:
 PlayerTileY: ds 1
@@ -489,5 +463,9 @@ PlayerTileX: ds 1
 KeyboardRow6Down: ds 1
 KeyboardRow6Pressed: ds 1
 
-TE equ (TileEmpty - Tiles)
-	include "levels.s8085"
+Level:
+.PlayerStartY: ds 1
+.PlayerStartX: ds 1
+.SolidBitMap: ds 24
+.TileOffsets: ds 24*8
+LevelEnd:

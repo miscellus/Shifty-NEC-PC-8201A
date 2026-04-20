@@ -65,6 +65,8 @@ while i < len(raw_lines):
     ch = m.group(1)
     tile = m.group(2)
     tags = set(re.findall(r'#([A-Za-z0-9_]+)', m.group(3) or ""))
+    if tile not in tile_labels and 'phony' not in tags:
+        print(f"WARNING: Unkown tile name, '{tile}'", file=sys.stderr)
     legend[ch] = (tile, tags)
     i += 1
 
@@ -187,7 +189,7 @@ out.append("")
 # Emit global equs for referenced tiles (sorted in order of first usage)
 for name, idx in all_referenced_tiles.items():
     alias = alias_map[name]
-    out.append(f"{alias} equ ({name} - Tiles)")
+    out.append(f"{alias} equ (({name} - Tiles)/10)")
 out.append("") 
 
 # Emit per-level blocks

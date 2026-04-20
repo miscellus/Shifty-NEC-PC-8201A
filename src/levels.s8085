@@ -3,6 +3,8 @@
 ;
 
 WB equ ((TileWallBrick - Tiles)/10)
+GS equ ((TileGroundSand - Tiles)/10)
+E equ ((TileEmpty - Tiles)/10)
 CS equ ((TileCrateStone - Tiles)/10)
 BK equ ((TileBoxKidDown - Tiles)/10)
 
@@ -41,28 +43,28 @@ Level1:
 
 .TileOffsets:
 	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
-	db  WB,  TE,  TE,  TE,  WB,  WB,  WB,  WB
-	db  WB,  TE,  CS,  TE,  TE,  WB,  WB,  WB
-	db  WB,  TE,  TE,  TE,  TE,  WB,  WB,  WB
-	db  WB,  WB,  WB,  TE,  TE,  TE,  WB,  WB
-	db  WB,  TE,  TE,  WB,  TE,  TE,  WB,  WB
-	db  WB,  TE,  TE,  TE,  TE,  TE,  WB,  WB
-	db  WB,  TE,  TE,  TE,  TE,  TE,  WB,  WB
-	db  WB,  TE,  TE,  TE,  TE,  TE,  TE,  WB
-	db  WB,  TE,  TE,  TE,  TE,  TE,  TE,  WB
-	db  WB,  TE,  TE,  TE,  TE,  TE,  TE,  WB
-	db  WB,  TE,  BK,  WB,  TE,  TE,  TE,  WB
-	db  WB,  TE,  TE,  WB,  TE,  TE,  TE,  WB
-	db  WB,  TE,  TE,  WB,  WB,  TE,  TE,  WB
-	db  WB,  TE,  WB,  TE,  TE,  TE,  TE,  WB
-	db  WB,  TE,  TE,  TE,  TE,  TE,  TE,  WB
-	db  WB,  TE,  TE,  TE,  TE,  TE,  TE,  WB
-	db  WB,  TE,  TE,  TE,  TE,  TE,  TE,  WB
-	db  WB,  TE,  TE,  TE,  TE,  TE,  TE,  WB
-	db  WB,  TE,  TE,  TE,  TE,  TE,  TE,  WB
-	db  WB,  WB,  TE,  TE,  TE,  TE,  TE,  WB
-	db  WB,  WB,  TE,  TE,  TE,  TE,  TE,  WB
-	db  WB,  WB,  WB,  WB,  TE,  TE,  TE,  WB
+	db  WB,  GS,  GS,  GS,  WB,  WB,  WB,  WB
+	db  WB,  GS,  CS,  GS,  GS,  WB,  WB,  WB
+	db  WB,  GS,  GS,  GS,  GS,  WB,  WB,  WB
+	db  WB,  WB,  WB,  GS,  GS,  GS,  WB,  WB
+	db  WB,  GS,  GS,  WB,  GS,  GS,  WB,  WB
+	db  WB,  E,  E,  GS,  E,  GS,  WB,  WB
+	db  WB,  E,  E,  GS,  GS,  GS,  WB,  WB
+	db  WB,  GS,  E,  E,  E,  E,  GS,  WB
+	db  WB,  E,  GS,  E,  GS,  E,  GS,  WB
+	db  WB,  E,  GS,  GS,  E,  GS,  E,  WB
+	db  WB,  E,  BK,  WB,  GS,  GS,  GS,  WB
+	db  WB,  GS,  GS,  WB,  GS,  GS,  GS,  WB
+	db  WB,  E,  GS,  WB,  WB,  GS,  GS,  WB
+	db  WB,  E,  WB,  GS,  GS,  GS,  E,  WB
+	db  WB,  E,  GS,  GS,  GS,  GS,  E,  WB
+	db  WB,  E,  GS,  GS,  GS,  GS,  E,  WB
+	db  WB,  GS,  E,  GS,  E,  GS,  GS,  WB
+	db  WB,  GS,  E,  E,  E,  GS,  GS,  WB
+	db  WB,  GS,  GS,  E,  E,  GS,  GS,  WB
+	db  WB,  WB,  GS,  E,  GS,  GS,  GS,  WB
+	db  WB,  WB,  GS,  GS,  GS,  GS,  GS,  WB
+	db  WB,  WB,  WB,  WB,  GS,  GS,  E,  WB
 	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
 
 ;-------------------------------------------------------------------------------
@@ -100,27 +102,27 @@ Level2:
 
 .TileOffsets:
 	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
-	db  WB,  WB,  WB,  TE,  TE,  WB,  WB,  WB
-	db  WB,  WB,  WB,  TE,  BK,  WB,  WB,  WB
-	db  WB,  WB,  WB,  TE,  TE,  WB,  WB,  WB
-	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
-	db  TE,  WB,  TE,  WB,  WB,  TE,  WB,  TE
-	db  TE,  WB,  TE,  WB,  WB,  TE,  WB,  TE
-	db  TE,  WB,  TE,  WB,  WB,  TE,  WB,  TE
-	db  TE,  WB,  TE,  WB,  WB,  TE,  WB,  TE
-	db  TE,  WB,  TE,  TE,  TE,  TE,  WB,  TE
-	db  TE,  WB,  WB,  WB,  WB,  CS,  WB,  TE
-	db  TE,  TE,  TE,  TE,  TE,  TE,  WB,  TE
-	db  TE,  WB,  WB,  WB,  WB,  TE,  WB,  TE
-	db  TE,  WB,  TE,  TE,  TE,  TE,  WB,  TE
-	db  TE,  WB,  TE,  WB,  WB,  CS,  WB,  TE
-	db  TE,  WB,  TE,  WB,  WB,  CS,  WB,  TE
-	db  TE,  WB,  TE,  WB,  WB,  CS,  WB,  TE
-	db  TE,  WB,  TE,  WB,  WB,  CS,  WB,  TE
-	db  TE,  WB,  TE,  WB,  WB,  CS,  WB,  TE
-	db  TE,  WB,  TE,  WB,  WB,  CS,  WB,  TE
-	db  TE,  CS,  TE,  TE,  CS,  TE,  TE,  TE
-	db  TE,  WB,  WB,  WB,  WB,  WB,  WB,  TE
-	db  TE,  WB,  WB,  WB,  WB,  WB,  WB,  TE
-	db  TE,  TE,  TE,  TE,  TE,  TE,  TE,  TE
+	db  WB,  WB,  WB,  E,  E,  WB,  WB,  WB
+	db  WB,  WB,  WB,  E,  BK,  WB,  WB,  WB
+	db  WB,  WB,  WB,  E,  E,  WB,  WB,  WB
+	db  E,  E,  E,  E,  E,  E,  E,  E
+	db  E,  WB,  E,  WB,  WB,  E,  WB,  E
+	db  E,  WB,  E,  WB,  WB,  E,  WB,  E
+	db  E,  WB,  E,  WB,  WB,  E,  WB,  E
+	db  E,  WB,  E,  WB,  WB,  E,  WB,  E
+	db  E,  WB,  E,  E,  E,  E,  WB,  E
+	db  E,  WB,  WB,  WB,  WB,  CS,  WB,  E
+	db  E,  E,  E,  E,  E,  E,  WB,  E
+	db  E,  WB,  WB,  WB,  WB,  E,  WB,  E
+	db  E,  WB,  E,  E,  E,  E,  WB,  E
+	db  E,  WB,  GS,  WB,  WB,  CS,  WB,  E
+	db  E,  WB,  GS,  WB,  WB,  CS,  WB,  E
+	db  E,  WB,  GS,  WB,  WB,  CS,  WB,  E
+	db  E,  WB,  GS,  WB,  WB,  CS,  WB,  E
+	db  E,  WB,  GS,  WB,  WB,  CS,  WB,  E
+	db  E,  WB,  GS,  WB,  WB,  CS,  WB,  E
+	db  E,  CS,  E,  E,  CS,  E,  E,  E
+	db  E,  WB,  WB,  WB,  WB,  WB,  WB,  E
+	db  E,  WB,  WB,  WB,  WB,  WB,  WB,  E
+	db  E,  E,  E,  E,  E,  E,  E,  E
 
