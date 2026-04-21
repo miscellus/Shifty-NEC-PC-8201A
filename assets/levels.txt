@@ -1,8 +1,10 @@
 . = TileEmpty
-# = TileWallBrick #solid #static
+# = TileWallBrick #solid
 @ = TileBoxKidDown #player
-s = TileCrateStone
+s = TileCrateStone #push
+b = TileCrateBox #push
 , = TileGroundSand
+H = TileHole
 
 Level1
 ########################
@@ -23,3 +25,13 @@ Level2
 ####......s...ssssss.##.
 ####.###############.##.
 ####....................
+
+LevelWithOneBox
+########################
+########################
+##########H...##########
+##########.@..##########
+##########..b.##########
+##########....##########
+########################
+########################

@@ -7,6 +7,8 @@ GS equ ((TileGroundSand - Tiles)/10)
 E equ ((TileEmpty - Tiles)/10)
 CS equ ((TileCrateStone - Tiles)/10)
 BK equ ((TileBoxKidDown - Tiles)/10)
+H equ ((TileHole - Tiles)/10)
+CB equ ((TileCrateBox - Tiles)/10)
 
 ;-------------------------------------------------------------------------------
 Level1:
@@ -125,4 +127,63 @@ Level2:
 	db  E,  WB,  WB,  WB,  WB,  WB,  WB,  E
 	db  E,  WB,  WB,  WB,  WB,  WB,  WB,  E
 	db  E,  E,  E,  E,  E,  E,  E,  E
+
+;-------------------------------------------------------------------------------
+LevelWithOneBox:
+;-------------------------------------------------------------------------------
+
+.PlayerStartY: db 3
+.PlayerStartX: db 11
+
+.SolidBitMap: ; 1 byte per column each bit signifies solid wall
+	db 0b11111111
+	db 0b11111111
+	db 0b11111111
+	db 0b11111111
+	db 0b11111111
+	db 0b11111111
+	db 0b11111111
+	db 0b11111111
+	db 0b11111111
+	db 0b11111111
+	db 0b11000011
+	db 0b11000011
+	db 0b11000011
+	db 0b11000011
+	db 0b11111111
+	db 0b11111111
+	db 0b11111111
+	db 0b11111111
+	db 0b11111111
+	db 0b11111111
+	db 0b11111111
+	db 0b11111111
+	db 0b11111111
+	db 0b11111111
+
+.TileOffsets:
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  H,  E,  E,  E,  WB,  WB
+	db  WB,  WB,  E,  BK,  E,  E,  WB,  WB
+	db  WB,  WB,  E,  E,  CB,  E,  WB,  WB
+	db  WB,  WB,  E,  E,  E,  E,  WB,  WB
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
+	db  WB,  WB,  WB,  WB,  WB,  WB,  WB,  WB
 
