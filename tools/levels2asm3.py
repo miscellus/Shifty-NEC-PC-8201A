@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-convert_sokoban_levels.py
+levels2asm.py
 
 Usage:
-  python convert_sokoban_levels.py levels.txt tiles.s8085 > levels_output.s8085
+  python levels2asm.py levels.txt tiles.s8085 > levels_output.s8085
 
 Features:
   - Accepts multiple levels in one input file. Each level starts with a line "LevelName"
@@ -29,7 +29,7 @@ import re
 from collections import OrderedDict
 
 if len(sys.argv) != 3:
-    print("Usage: python convert_sokoban_levels.py levels.txt tiles.s8085", file=sys.stderr)
+    print("Usage: python levels2asm.py levels.txt tiles.s8085", file=sys.stderr)
     sys.exit(2)
 
 levels_file = sys.argv[1]

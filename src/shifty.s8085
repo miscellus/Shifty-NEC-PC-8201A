@@ -130,7 +130,7 @@ GameInit:
 	sta PlayerTileY
 
 	call SetInterruptMask_1d
-	lxi h, Level.TileOffsets
+	lxi h, Level.TileData
 	mvi d, 0 ; [D] = X = 0
 .drawLevelRows:
 	mvi e, 0 ; [E] = Y = 0
@@ -138,6 +138,7 @@ GameInit:
 	push h ; Save level offset
 
 	mov a, m
+	ani 0x1F ; TileIndex Mask
 	mvi h, 0
 	mov l, a ; [HL] = TileIndex
 	dad h ; * 2
@@ -457,6 +458,7 @@ SetInterruptMask_09:
 
 ;=======================================
 ; Tile images
+Tiles:
   include "tiles.s8085"
 
 ;=======================================
@@ -476,5 +478,5 @@ Level:
 .PlayerStartY: ds 1
 .PlayerStartX: ds 1
 .SolidBitMap: ds 24
-.TileOffsets: ds 24*8
+.TileData: ds 24*8
 LevelEnd:
