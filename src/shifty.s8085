@@ -193,18 +193,18 @@ CheckSolid:
 	cpi 24
 	jnc .endWithCarry
 
-	lxi h, Level.SolidBitMap
+	lxi h, Level.TileData
+	mov a, d
+	add a
+	add a
+	add a ; + X*8
+	add e ; + Y
 	mvi b, 0
-	mov c, d ; move X into BC
-	dad b ; now HL points at SolidBitMap + X
-	mov a, m ; Load column of solid bits
-
-	mov c, e ; [C] = Y
-	inr c
-.shift:
-	rrc ; 7
-	dcr c
-	jnz .shift
+	mov c, a
+	dad b ; now HL points at TileData + X*8 + Y
+	mov a, m ; Load tile attributes
+	rlc ; rotate MSB (solid flag) into carry
+	jmp .end ; done
 
 	jmp .end
 .endWithCarry:
@@ -477,6 +477,5 @@ KeyboardRow6Pressed: ds 1
 Level:
 .PlayerStartY: ds 1
 .PlayerStartX: ds 1
-.SolidBitMap: ds 24
 .TileData: ds 24*8
 LevelEnd:
