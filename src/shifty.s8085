@@ -3,26 +3,26 @@ TargetNec equ 1
 	include "hardware.s8085"
 
 	org MapRamBase
-Game:
+GameStart:
 	call Init
-.gameLoop:
+GameLoop:
 	call CheckStopKey
 	rc
 
-	lda KeyboardRow6Down
-	cma
-	mov b, a ; Store NOT of the old row 6 in b
-	call ReadArrowKeyRow
-	sta KeyboardRow6Down
-	ana b
-	sta KeyboardRow6Pressed
-	ani KeyUp | KeyDown | KeyLeft | KeyRight
-	mov b, a
-	jz .gameLoop ; If none of the movement keys were pressed, jump back
+	call ReadInput
+	jz GameLoop ; If none of the movement keys were pressed, jump back
 
-	;
-	; Move player
-	;
+	call TryMove
+	jc GameLoop
+
+	call Draw
+	jmp GameLoop
+	ret
+
+TryMove:
+; Output:
+;  CF = 1 if move was cancelled, 0 otherwise
+; Clobbers: assume all
 
 	xra a
 	mov d, a ; zero [DE]
@@ -66,7 +66,7 @@ Game:
 	xchg ; [D] = x, [E] = y
 
 	call CheckSolid
-	jc .gameLoop ; Loop back if solid hit
+	rc ; return with carry if the move should be cancelled
 
 	push d ; save new player pos
 	di
@@ -78,8 +78,22 @@ Game:
 	pop h ; restore new player pos in HL
 	shld PlayerPos ; Save position that was previously in [DE]
 
-	call Draw
-	jmp .gameLoop
+	ora a ; clear carry to indicate that the move was performed
+	ret
+
+ReadInput:
+; Output:
+;  [B], [A] = KeyUp | KeyDown | KeyLeft | KeyRight
+;  flags set according to ANI
+	lda KeyboardRow6Down
+	cma
+	mov b, a ; Store NOT of the old row 6 in b
+	call ReadArrowKeyRow
+	sta KeyboardRow6Down
+	ana b
+	sta KeyboardRow6Pressed
+	ani KeyUp | KeyDown | KeyLeft | KeyRight
+	mov b, a
 	ret
 
 LoadLevel:
@@ -206,11 +220,6 @@ Draw:
 	xchg
 	lxi h, TileBoxKidDown
 	call DrawTile
-
-	; mvi d, 11
-	; mvi e, 3
-	; lxi h, TileWallBrick
-	; call DrawTile
 
 	call SetInterruptMask_09
 	ret
