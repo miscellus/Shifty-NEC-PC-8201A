@@ -12,14 +12,15 @@ GameLoop:
 	call ReadInput
 	jz GameLoop ; If none of the movement keys were pressed, jump back
 
-	call TryMove
+	call PlayerMove
 	jc GameLoop
 
 	call Draw
 	jmp GameLoop
 	ret
 
-TryMove:
+PlayerMove:
+; [B] = pressed key state
 ; Output:
 ;  CF = 1 if move was cancelled, 0 otherwise
 ; Clobbers: assume all
@@ -27,8 +28,6 @@ TryMove:
 	xra a
 	mov d, a ; zero [DE]
 	mov e, a
-
-	; [B] = pressed key state
 
 	mov a, b ; restore pressed
 	ani KeyLeft
@@ -65,6 +64,7 @@ TryMove:
 	mov l, a
 	xchg ; [D] = x, [E] = y
 
+	lxi h, Level.TileData
 	call CheckSolid
 	rc ; return with carry if the move should be cancelled
 
@@ -173,27 +173,12 @@ GameInit:
 	call Draw
 	ret
 
-CheckSolid:
-; [D]: X pos
-; [E]: Y pos
-; X looks up solid row
-; turn Y which bit to check
-	push h
+GetByteAtPosition:
+; [HL] = points to base of e.g. Level.TileData (or any uint8_t[8][24])
+; [D] = X pos
+; [E] = Y pos
+; Clobbers [A]
 	push b
-
-	;
-	; Check map boundary
-	;
-
-	mov a, e ; check y
-	cpi 8
-	jnc .endWithCarry
-
-	mov a, d ; check x
-	cpi 24
-	jnc .endWithCarry
-
-	lxi h, Level.TileData
 	mov a, d
 	add a
 	add a
@@ -203,15 +188,30 @@ CheckSolid:
 	mov c, a
 	dad b ; now HL points at TileData + X*8 + Y
 	mov a, m ; Load tile attributes
-	rlc ; rotate MSB (solid flag) into carry
-	jmp .end ; done
+	pop b
+	ret
 
-	jmp .end
+CheckSolid:
+; [HL] = points to base of e.g. Level.TileData (or any uint8_t[8][24])
+; [D]: X pos
+; [E]: Y pos
+; X looks up solid row
+; turn Y which bit to check
+
+	; Check map boundary
+	mov a, e ; check y
+	cpi 8
+	jnc .endWithCarry
+	mov a, d ; check x
+	cpi 24
+	jnc .endWithCarry
+
+	call GetByteAtPosition
+	rlc ; rotate MSB (solid flag) into carry
+	ret ; done
+
 .endWithCarry:
 	stc
-.end:
-	pop b
-	pop h
 	ret ; carry should be the solid flag
 
 Draw:
