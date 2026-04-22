@@ -64,8 +64,12 @@ PlayerMove:
 	mov l, a
 	xchg ; [D] = x, [E] = y
 
+	; Check map boundary
+	call IsPosOutOfBounds
+	rc ; return with carry if the move should be cancelled
+
 	lxi h, Level.TileData
-	call CheckSolid
+	call IsSolidAtPos
 	rc ; return with carry if the move should be cancelled
 
 	push d ; save new player pos
@@ -173,46 +177,69 @@ GameInit:
 	call Draw
 	ret
 
-GetByteAtPosition:
-; [HL] = points to base of e.g. Level.TileData (or any uint8_t[8][24])
+IndexFromPos:
 ; [D] = X pos
 ; [E] = Y pos
-; Clobbers [A]
-	push b
+; -> [A] = Index
 	mov a, d
 	add a
 	add a
 	add a ; + X*8
 	add e ; + Y
-	mvi b, 0
-	mov c, a
-	dad b ; now HL points at TileData + X*8 + Y
-	mov a, m ; Load tile attributes
-	pop b
 	ret
 
-CheckSolid:
+GetByteAtPos:
 ; [HL] = points to base of e.g. Level.TileData (or any uint8_t[8][24])
-; [D]: X pos
-; [E]: Y pos
-; X looks up solid row
-; turn Y which bit to check
+; [D] = X pos
+; [E] = Y pos
+; -> [A] = Looked up byte
+; Clobbers [HL]
+	call IndexFromPos
 
-	; Check map boundary
+	; intended fallthrough
+
+GetByteAtIndex:
+; [HL] = points to base of array (max length 255)
+; [A] = Index
+; -> [A] Looked up byte
+	add l
+	mov l, a
+	mvi a, 0
+	adc h
+	mov h, a ; [HL] = TileData + X*8 + Y
+	mov a, m ; [A] = tile attribute
+	ret
+
+IsPosOutOfBounds:
+; [D] = X pos
+; [E] = Y pos
+; -> [CF] 1 if out of bounds
+; Clobbers [A]
 	mov a, e ; check y
-	cpi 8
-	jnc .endWithCarry
+	adi -8
+	rc
 	mov a, d ; check x
-	cpi 24
-	jnc .endWithCarry
+	adi -24
+	ret
 
-	call GetByteAtPosition
+IsSolidAtPos:
+; [HL] = points to base of e.g. Level.TileData (or any uint8_t[8][24])
+; [D] = X pos
+; [E] = Y pos
+; -> [CF] 1 if solid (or out of bounds)
+; Clobbers [A] [PSW]
+	call IndexFromPos
+
+	; intended fallthrough
+
+IsSolidAtIndex:
+; [HL] = points to base of e.g. Level.TileData
+; [A] = index
+; -> [CF] 1 if solid (or out of bounds)
+; Clobbers [A] [PSW]
+	call GetByteAtIndex
 	rlc ; rotate MSB (solid flag) into carry
 	ret ; done
-
-.endWithCarry:
-	stc
-	ret ; carry should be the solid flag
 
 Draw:
 	call SetInterruptMask_1d
