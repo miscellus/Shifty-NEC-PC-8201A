@@ -1,3 +1,5 @@
+TileIndexMask equ 0b00011111
+
 TargetNec equ 1
 ; TargetT100 equ 1
 	include "hardware.s8085"
@@ -64,13 +66,36 @@ PlayerMove:
 	mov l, a
 	xchg ; [D] = x, [E] = y
 
+	; [DE] = new pos
+
 	; Check map boundary
 	call IsPosOutOfBounds
 	rc ; return with carry if the move should be cancelled
 
 	lxi h, Level.TileData
-	call IsSolidAtPos
+	call GetByteAtPos
+	mov b, a ; [B] = tile data
+
+	; Check for pushables
+	; TODO(jkk): For now we only consider TileCrateBox pushable, but I think we want a bit for this
+	ani TileIndexMask
+	mov c, a ; [C] = tile index
+
+	cpi TileCrateBox_Index
+	rz ; test
+
+	mov a, c
+	cpi TileHole_Index
+	rz ; test
+
+	; jz ; FORSÆT HER JAKOB
+
+	mov a, b ; restore tile data
+	rlc ; [CF] = 1 means solid [CF] = 0 means not solid
 	rc ; return with carry if the move should be cancelled
+
+	; call IsSolidAtPos
+	; rc ; return with carry if the move should be cancelled
 
 	push d ; save new player pos
 	di
@@ -142,7 +167,7 @@ GameInit:
 	push h ; Save level offset
 
 	mov a, m
-	ani 0x1F ; TileIndex Mask
+	ani TileIndexMask
 	mvi h, 0
 	mov l, a ; [HL] = TileIndex
 	dad h ; * 2
